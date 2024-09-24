@@ -3,6 +3,9 @@ from django.contrib.auth.models import AbstractUser
 
 
 class User(AbstractUser):
+    """
+    Пользовательская модель, расширяющая стандартную модель AbstractUser.
+    """
     email = models.EmailField(
         max_length=254,
         unique=True,

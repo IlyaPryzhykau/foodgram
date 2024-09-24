@@ -6,6 +6,7 @@ User = get_user_model()
 
 
 class Tag(models.Model):
+    """Модель тега, который может быть присвоен рецепту."""
     name = models.CharField(
         'Тег',
         max_length=32
@@ -24,6 +25,7 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
+    """Модель ингредиента, используемого в рецептах."""
     name = models.CharField(
         'Ингридиент',
         max_length=128
@@ -42,6 +44,9 @@ class Ingredient(models.Model):
 
 
 class RecipeIngredient(models.Model):
+    """
+    Модель для связи между рецептами и ингредиентами с указанием количества.
+    """
     recipe = models.ForeignKey(
         'Recipe',
         related_name='recipe_ingredients',
@@ -60,8 +65,14 @@ class RecipeIngredient(models.Model):
         verbose_name = 'ингредиент для рецепта'
         verbose_name_plural = 'ингредиенты для рецептов'
 
+    def __str__(self):
+        return f'Ингридиенты для рецепта "{self.recipe.name}"'
+
 
 class Recipe(models.Model):
+    """
+    Модель рецепта с указанием его ингредиентов, автора и других характеристик.
+    """
     tags = models.ManyToManyField(
         Tag,
         related_name='recipes',
@@ -101,8 +112,14 @@ class Recipe(models.Model):
         verbose_name_plural = 'Рецепты'
         ordering = ('-id',)
 
+    def __str__(self):
+        return self.name
+
 
 class Subscription(models.Model):
+    """
+    Модель подписки пользователя на другого пользователя (автора рецептов).
+    """
     user = models.ForeignKey(
         User,
         related_name='follower',
@@ -132,11 +149,13 @@ class Subscription(models.Model):
         return f'{self.user} подписан на {self.author}'
 
     def clean(self):
+        """Проверка на попытку подписки на самого себя."""
         if self.user == self.author:
             raise ValidationError("Нельзя подписаться на самого себя.")
 
 
 class Favorite(models.Model):
+    """Модель избранного, позволяющая пользователю сохранять рецепты."""
     user = models.ForeignKey(
         User,
         related_name='favorites',
@@ -160,8 +179,15 @@ class Favorite(models.Model):
         verbose_name = 'избранное'
         verbose_name_plural = 'Избранные рецепты'
 
+    def __str__(self):
+        return f'{self.user.email} - {self.recipe.name}'
+
 
 class ShoppingCart(models.Model):
+    """
+    Модель списка покупок, позволяющая пользователю сохранять
+    рецепты для последующего использования.
+    """
     user = models.ForeignKey(
         User,
         related_name='shopping_cart',
@@ -184,3 +210,6 @@ class ShoppingCart(models.Model):
         ]
         verbose_name = 'список покупок'
         verbose_name_plural = 'Списки покупок'
+
+    def __str__(self):
+        return f'{self.user.email} - {self.recipe.name} в списке покупок'
