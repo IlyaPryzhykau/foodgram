@@ -148,7 +148,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
 
         Favorite.objects.create(user=user, recipe=recipe)
-        serializer = RecipeShortSerializer(recipe, context={'request': request})
+        serializer = RecipeShortSerializer(
+            recipe,
+            context={'request': request}
+        )
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['delete'], url_path='favorite')
@@ -164,7 +168,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         favorite_item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
 
     @action(detail=True, methods=['post'])
     def add_to_shopping_cart(self, request, pk=None):
@@ -220,7 +223,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     ingredients[name] = {'amount': amount, 'unit': unit}
 
         response = HttpResponse(content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename="shopping_cart.txt"'
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_cart.txt"'
+        )
 
         sorted_ingredients = sorted(ingredients.items(), key=lambda x: x[0])
 
@@ -233,7 +238,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_short_link(self, request, pk=None):
         """Получить короткую ссылку на рецепт."""
         recipe = self.get_object()
-        short_link = f'http://richi-host.zapto.org/api/s/{encode_id(recipe.id)}'
+        short_link = (
+            f'http://richi-host.zapto.org/api/s/{encode_id(recipe.id)}'
+        )
 
         return Response({'short-link': short_link})
 

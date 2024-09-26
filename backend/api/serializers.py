@@ -131,13 +131,13 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         user = self.context['request'].user
-        return (user.is_authenticated and
-                Favorite.objects.filter(user=user, recipe=obj).exists())
+        return (user.is_authenticated and Favorite.objects.filter(
+            user=user, recipe=obj).exists())
 
     def get_is_in_shopping_cart(self, obj):
         user = self.context['request'].user
-        return (user.is_authenticated and
-                ShoppingCart.objects.filter(user=user, recipe=obj).exists())
+        return (user.is_authenticated and ShoppingCart.objects.filter(
+            user=user, recipe=obj).exists())
 
     def validate(self, data):
         ingredients = data.get('recipe_ingredients', [])
@@ -216,7 +216,10 @@ class RecipeSerializer(serializers.ModelSerializer):
             } for ri in ingredients
         ]
 
-        representation['tags'] = TagSerializer(instance.tags.all(), many=True).data
+        representation['tags'] = TagSerializer(
+            instance.tags.all(),
+            many=True
+        ).data
 
         return representation
 
@@ -251,9 +254,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         user = self.context['request'].user
-        return (user.is_authenticated and
-                Subscription.objects.filter(user=user,
-                                            author=obj.author).exists())
+        return (user.is_authenticated and Subscription.objects.filter(
+            user=user, author=obj.author).exists())
 
     def get_recipes_count(self, obj):
         return Recipe.objects.filter(author=obj.author).count()
