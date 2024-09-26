@@ -233,7 +233,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_short_link(self, request, pk=None):
         """Получить короткую ссылку на рецепт."""
         recipe = self.get_object()
-        short_link = f'http://127.0.0.1:8000/api/s/{encode_id(recipe.id)}'
+        short_link = f'http://richi-host.zapto.org/api/s/{encode_id(recipe.id)}'
 
         return Response({'short-link': short_link})
 
@@ -242,7 +242,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Перенаправить на рецепт по закодированному ID."""
         recipe = get_object_or_404(Recipe, id=decode_id(encoded_id))
 
-        return redirect('recipes-detail', pk=recipe.id)
+        return redirect(f'http://richi-host.zapto.org/recipes/{recipe.id}')
 
     def update(self, request, *args, **kwargs):
         """Обновить рецепт."""
@@ -260,6 +260,5 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if request.user != recipe.author:
             return Response(
                 {'error': 'Вы не можете удалять чужой рецепт.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+                status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)

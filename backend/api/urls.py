@@ -59,8 +59,7 @@ urlpatterns = [
     path(
         's/<str:encoded_id>/',
         RecipeViewSet.as_view(
-            {'get': 'redirect_to_recipe'}
-        ),
+            {'get': 'redirect_to_recipe'}),
         name='recipe_detail'
     ),
     path('auth/', include('djoser.urls')),
