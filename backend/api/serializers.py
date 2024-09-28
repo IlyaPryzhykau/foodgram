@@ -3,11 +3,11 @@ import base64
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
+from django.conf import settings
 from rest_framework.exceptions import ValidationError
 
 from .models import (Recipe, Subscription, Tag, Ingredient,
                      RecipeIngredient, Favorite, ShoppingCart)
-from foodgram.settings import DEFAULT_PAGE_SIZE
 
 User = get_user_model()
 
@@ -57,18 +57,18 @@ class UserSerializer(serializers.ModelSerializer):
     def get_is_subscribed(self, obj):
         user = self.context['request'].user
         if user.is_authenticated:
-            return Subscription.objects.filter(user=user, author=obj).exists()
+            return user.follower.filter(author=obj).exists()
         return False
 
     def get_recipes(self, obj):
         if self.get_is_subscribed(obj):
-            recipes = Recipe.objects.filter(author=obj)
+            recipes = obj.recipes.all()
             return RecipeSerializer(recipes, many=True,
                                     context=self.context).data
 
     def get_recipes_count(self, obj):
         if self.get_is_subscribed(obj):
-            return Recipe.objects.filter(author=obj).count()
+            return obj.recipes.count()
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -116,8 +116,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         is_subscribed = False
 
         if request and request.user.is_authenticated:
-            is_subscribed = Subscription.objects.filter(user=request.user,
-                                                        author=user).exists()
+            is_subscribed = request.user.follower.filter(author=user).exists()
 
         return {
             'email': user.email,
@@ -131,13 +130,13 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         user = self.context['request'].user
-        return (user.is_authenticated and Favorite.objects.filter(
-            user=user, recipe=obj).exists())
+        return (user.is_authenticated
+                and user.favorites.filter(recipe=obj).exists())
 
     def get_is_in_shopping_cart(self, obj):
         user = self.context['request'].user
-        return (user.is_authenticated and ShoppingCart.objects.filter(
-            user=user, recipe=obj).exists())
+        return (user.is_authenticated
+                and user.shopping_cart.filter(recipe=obj).exists())
 
     def validate(self, data):
         ingredients = data.get('recipe_ingredients', [])
@@ -254,11 +253,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         user = self.context['request'].user
-        return (user.is_authenticated and Subscription.objects.filter(
-            user=user, author=obj.author).exists())
+        return (user.is_authenticated
+                and user.follower.filter(author=obj).exists())
 
     def get_recipes_count(self, obj):
-        return Recipe.objects.filter(author=obj.author).count()
+        return obj.recipes.count()
 
     def get_recipes(self, obj):
         request = self.context.get('request')
@@ -269,8 +268,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
                 recipes_limit = int(recipes_limit)
             except ValueError:
                 recipes_limit = None
-        recipes = Recipe.objects.filter(
-            author=obj.author)[:recipes_limit or DEFAULT_PAGE_SIZE]
+        recipes = obj.recipes.all()[
+                  :recipes_limit or settings.DEFAULT_PAGE_SIZE
+                  ]
 
         return RecipeShortSerializer(recipes, many=True,
                                      context=self.context).data

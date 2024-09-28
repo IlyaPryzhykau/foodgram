@@ -48,7 +48,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Возвращает список подписок текущего пользователя."""
-        return Subscription.objects.filter(user=self.request.user)
+        return self.request.user.follower.all()
 
     @action(detail=True, methods=['post'])
     def subscribe(self, request, pk=None):
@@ -72,8 +72,8 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     def unsubscribe(self, request, pk=None):
         """Отменить подписку на автора."""
         author = get_object_or_404(User, pk=pk)
-        subscription = Subscription.objects.filter(user=request.user,
-                                                   author=author)
+        subscription = request.user.follower.filter(author=author).first()
+
         if subscription.exists():
             subscription.delete()
             return Response({'status': 'Подписка удалена'},
@@ -143,7 +143,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Добавить рецепт в избранное."""
         recipe = self.get_object()
         user = request.user
-        if Favorite.objects.filter(user=user, recipe=recipe).exists():
+        if user.favorites.filter(recipe=recipe).exists():
             return Response({'error': 'Рецепт уже в избранном.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -160,7 +160,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Удалить рецепт из избранного."""
         recipe = self.get_object()
         user = request.user
-        favorite_item = Favorite.objects.filter(user=user, recipe=recipe)
+        favorite_item = user.favorites.filter(recipe=recipe)
 
         if not favorite_item.exists():
             raise ValidationError({'error': 'Рецепт не в избранном.'},
@@ -174,7 +174,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Добавить рецепт в список покупок."""
         recipe = self.get_object()
         user = request.user
-        if ShoppingCart.objects.filter(user=user, recipe=recipe).exists():
+        if user.shopping_cart.filter(recipe=recipe).exists():
             return Response({'error': 'Рецепт уже в списке покупок.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -189,8 +189,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Удалить рецепт из списка покупок."""
         recipe = self.get_object()
         user = request.user
-        shopping_cart_item = ShoppingCart.objects.filter(user=user,
-                                                         recipe=recipe)
+        shopping_cart_item = user.shopping_cart.filter(recipe=recipe)
 
         if not shopping_cart_item.exists():
             raise ValidationError({'error': 'Рецепт не в списке покупок.'},
@@ -204,8 +203,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def download_shopping_cart(self, request):
         """Скачать список ингредиентов из списка покупок."""
         user = request.user
-        shopping_cart = ShoppingCart.objects.filter(user=user).select_related(
-            'recipe')
+        shopping_cart = user.shopping_cart.select_related('recipe')
 
         ingredients = {}
         for item in shopping_cart:

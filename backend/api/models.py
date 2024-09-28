@@ -5,6 +5,12 @@ from rest_framework.exceptions import ValidationError
 User = get_user_model()
 
 
+MIN_AMOUNT = 1
+MAX_AMOUNT = 32_000
+MIN_COOKING_TIME = 1
+MAX_COOKING_TIME = 32_000
+
+
 class Tag(models.Model):
     """Модель тега, который может быть присвоен рецепту."""
     name = models.CharField(
@@ -19,6 +25,7 @@ class Tag(models.Model):
     class Meta:
         verbose_name = 'тег'
         verbose_name_plural = 'Теги'
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
@@ -38,6 +45,7 @@ class Ingredient(models.Model):
     class Meta:
         verbose_name = 'ингридиент'
         verbose_name_plural = 'Ингридиенты'
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
@@ -59,11 +67,18 @@ class RecipeIngredient(models.Model):
         verbose_name='Ингредиент',
         on_delete=models.CASCADE
     )
-    amount = models.PositiveIntegerField('Количество')
+    amount = models.PositiveSmallIntegerField(
+        'Количество',
+        validators=[
+            models.Min(MIN_AMOUNT),
+            models.Max(MAX_AMOUNT)
+        ]
+    )
 
     class Meta:
         verbose_name = 'ингредиент для рецепта'
         verbose_name_plural = 'ингредиенты для рецептов'
+        ordering = ('recipe',)
 
     def __str__(self):
         return f'Ингридиенты для рецепта "{self.recipe.name}"'
@@ -101,10 +116,14 @@ class Recipe(models.Model):
         null=True
     )
     text = models.TextField('Описание', blank=True)
-    cooking_time = models.PositiveIntegerField(
+    cooking_time = models.PositiveSmallIntegerField(
         'Время приготовления (в минутах)',
         null=True,
-        blank=True
+        blank=True,
+        validators=[
+            models.Min(MIN_COOKING_TIME),
+            models.Max(MAX_COOKING_TIME)
+        ]
     )
 
     class Meta:
@@ -178,6 +197,7 @@ class Favorite(models.Model):
         ]
         verbose_name = 'избранное'
         verbose_name_plural = 'Избранные рецепты'
+        ordering = ('-id',)
 
     def __str__(self):
         return f'{self.user.email} - {self.recipe.name}'
@@ -210,6 +230,7 @@ class ShoppingCart(models.Model):
         ]
         verbose_name = 'список покупок'
         verbose_name_plural = 'Списки покупок'
+        ordering = ('-id',)
 
     def __str__(self):
         return f'{self.user.email} - {self.recipe.name} в списке покупок'
