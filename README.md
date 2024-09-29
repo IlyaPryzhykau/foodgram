@@ -34,19 +34,18 @@ GET /api/recipes/
 Создать новый рецепт
 POST /api/recipes/
 Content-Type: application/json
-
 {
-    "name": "Нечто съедобное",
-    "ingredients": [
-        {
-            "id": 1,
-            "amount": 10
-        }
-    ],
-    "tags": [1, 2],
-    "image": "data:image/png;base64,...",
-    "text": "Приготовьте как нибудь эти ингредиенты",
-    "cooking_time": 5
+  "name": "Нечто съедобное",
+  "ingredients": [
+    {
+      "id": 1,
+      "amount": 10
+    }
+  ],
+  "tags": [1, 2],
+  "image": "data:image/png;base64,...",
+  "text": "Приготовьте как нибудь эти ингредиенты",
+  "cooking_time": 5
 }
 
 Получить информацию о рецепте по ID
