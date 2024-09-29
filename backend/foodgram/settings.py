@@ -4,7 +4,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
+BASE_URL = 'http://richi-host.zapto.org/'
 DEFAULT_PAGE_SIZE = 6
+MIN_AMOUNT = 1
+MAX_AMOUNT = 32_000
+MIN_COOKING_TIME = 1
+MAX_COOKING_TIME = 32_000
 
 load_dotenv()
 

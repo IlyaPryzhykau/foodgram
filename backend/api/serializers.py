@@ -6,8 +6,7 @@ from django.core.files.base import ContentFile
 from django.conf import settings
 from rest_framework.exceptions import ValidationError
 
-from .models import (Recipe, Subscription, Tag, Ingredient,
-                     RecipeIngredient, Favorite, ShoppingCart)
+from .models import Recipe, RecipeIngredient, Subscription, Tag, Ingredient
 
 User = get_user_model()
 
@@ -85,11 +84,26 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
     id = serializers.PrimaryKeyRelatedField(
         queryset=Ingredient.objects.all(), source='ingredient'
     )
-    amount = serializers.IntegerField()
+    amount = serializers.IntegerField(
+        min_value=settings.MIN_AMOUNT,
+        max_value=settings.MAX_AMOUNT
+    )
 
     class Meta:
         model = RecipeIngredient
         fields = ('id', 'amount')
+
+
+class RecipeIngredientDetailSerializer(serializers.ModelSerializer):
+    """Сериализатор для отображения ингредиентов в рецепте."""
+    id = serializers.ReadOnlyField(source='ingredient.id')
+    name = serializers.ReadOnlyField(source='ingredient.name')
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredient.measurement_unit')
+
+    class Meta:
+        model = RecipeIngredient
+        fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -102,7 +116,10 @@ class RecipeSerializer(serializers.ModelSerializer):
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
     image = Base64ImageField()
-    cooking_time = serializers.IntegerField()
+    cooking_time = serializers.IntegerField(
+        min_value=settings.MIN_COOKING_TIME,
+        max_value=settings.MAX_COOKING_TIME
+    )
 
     class Meta:
         model = Recipe
@@ -146,18 +163,11 @@ class RecipeSerializer(serializers.ModelSerializer):
             raise ValidationError(
                 {'recipe_ingredients': 'Это поле не может быть пустым.'})
 
-        ingredient_ids = [item.get('ingredient').id for item in ingredients]
+        ingredient_ids = [item['ingredient'].id for item in ingredients]
         if not Ingredient.objects.filter(id__in=ingredient_ids).count() == len(
                 ingredient_ids):
             raise ValidationError(
                 {'recipe_ingredients': 'Некоторые ингредиенты не существуют.'})
-
-        for ingredient in ingredients:
-            if ingredient.get('amount', 0) <= 0:
-                raise ValidationError(
-                    {'recipe_ingredients': 'Количество '
-                                           'ингредиента должно быть больше 0.'}
-                )
 
         if len(ingredient_ids) != len(set(ingredient_ids)):
             raise ValidationError(
@@ -178,14 +188,21 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         return data
 
+    def create_recipe_ingredients(self, recipe, ingredients_data):
+        """Создает ингредиенты для рецепта с использованием bulk_create."""
+        recipe_ingredients = [
+            RecipeIngredient(recipe=recipe, **ingredient_data)
+            for ingredient_data in ingredients_data
+        ]
+        RecipeIngredient.objects.bulk_create(recipe_ingredients)
+
     def create(self, validated_data):
         ingredients_data = validated_data.pop('recipe_ingredients')
         tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(**validated_data)
         recipe.tags.set(tags)
 
-        for ingredient_data in ingredients_data:
-            RecipeIngredient.objects.create(recipe=recipe, **ingredient_data)
+        self.create_recipe_ingredients(recipe, ingredients_data)
 
         return recipe
 
@@ -195,9 +212,8 @@ class RecipeSerializer(serializers.ModelSerializer):
         instance = super().update(instance, validated_data)
 
         instance.recipe_ingredients.all().delete()
-        for ingredient_data in ingredients_data:
-            RecipeIngredient.objects.create(recipe=instance, **ingredient_data)
 
+        self.create_recipe_ingredients(instance, ingredients_data)
         instance.tags.set(tags_data)
 
         return instance
@@ -205,15 +221,10 @@ class RecipeSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
 
-        ingredients = instance.recipe_ingredients.all()
-        representation['ingredients'] = [
-            {
-                'id': ri.ingredient.id,
-                'name': ri.ingredient.name,
-                'measurement_unit': ri.ingredient.measurement_unit,
-                'amount': ri.amount
-            } for ri in ingredients
-        ]
+        representation['ingredients'] = RecipeIngredientDetailSerializer(
+            instance.recipe_ingredients.all(),
+            many=True
+        ).data
 
         representation['tags'] = TagSerializer(
             instance.tags.all(),
@@ -251,13 +262,23 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'avatar', 'is_subscribed', 'recipes', 'recipes_count'
         )
 
+    def validate(self, data):
+        user = self.context['request'].user
+        author = data.get('author')
+
+        if user == author:
+            raise serializers.ValidationError(
+                'Нельзя подписаться на самого себя.')
+
+        return data
+
     def get_is_subscribed(self, obj):
         user = self.context['request'].user
         return (user.is_authenticated
-                and user.follower.filter(author=obj).exists())
+                and user.follower.filter(author=obj.author).exists())
 
     def get_recipes_count(self, obj):
-        return obj.recipes.count()
+        return obj.author.recipes.count()
 
     def get_recipes(self, obj):
         request = self.context.get('request')
@@ -268,7 +289,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
                 recipes_limit = int(recipes_limit)
             except ValueError:
                 recipes_limit = None
-        recipes = obj.recipes.all()[
+        recipes = obj.author.recipes.all()[
                   :recipes_limit or settings.DEFAULT_PAGE_SIZE
                   ]
 

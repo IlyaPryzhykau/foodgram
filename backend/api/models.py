@@ -1,14 +1,9 @@
 from django.db import models
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import ValidationError
 
 User = get_user_model()
-
-
-MIN_AMOUNT = 1
-MAX_AMOUNT = 32_000
-MIN_COOKING_TIME = 1
-MAX_COOKING_TIME = 32_000
 
 
 class Tag(models.Model):
@@ -70,8 +65,8 @@ class RecipeIngredient(models.Model):
     amount = models.PositiveSmallIntegerField(
         'Количество',
         validators=[
-            models.Min(MIN_AMOUNT),
-            models.Max(MAX_AMOUNT)
+            models.Min(settings.MIN_AMOUNT),
+            models.Max(settings.MAX_AMOUNT)
         ]
     )
 
@@ -121,8 +116,8 @@ class Recipe(models.Model):
         null=True,
         blank=True,
         validators=[
-            models.Min(MIN_COOKING_TIME),
-            models.Max(MAX_COOKING_TIME)
+            models.Min(settings.MIN_COOKING_TIME),
+            models.Max(settings.MAX_COOKING_TIME)
         ]
     )
 

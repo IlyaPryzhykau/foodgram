@@ -7,6 +7,7 @@ from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from django.shortcuts import get_object_or_404, redirect
 from django.http import HttpResponse
+from django.conf import settings
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
 from djoser.views import UserViewSet as BaseUserViewSet
@@ -54,9 +55,6 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     def subscribe(self, request, pk=None):
         """Подписаться на автора."""
         author = get_object_or_404(User, pk=pk)
-        if author == request.user:
-            return Response({'error': 'Нельзя подписаться на самого себя.'},
-                            status=status.HTTP_400_BAD_REQUEST)
 
         subscription, created = Subscription.objects.get_or_create(
             user=request.user, author=author
@@ -72,7 +70,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     def unsubscribe(self, request, pk=None):
         """Отменить подписку на автора."""
         author = get_object_or_404(User, pk=pk)
-        subscription = request.user.follower.filter(author=author).first()
+        subscription = request.user.follower.filter(author=author)
 
         if subscription.exists():
             subscription.delete()
@@ -112,10 +110,10 @@ class UserViewSet(BaseUserViewSet):
         serializer = UserSerializer(user, data=request.data, partial=True,
                                     context={'request': request})
 
-        if serializer.is_valid():
-            serializer.save()
-            return Response({'avatar': user.avatar.url})
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response({'avatar': user.avatar.url})
 
     @action(detail=False, methods=['delete'])
     def delete_avatar(self, request):
@@ -236,9 +234,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_short_link(self, request, pk=None):
         """Получить короткую ссылку на рецепт."""
         recipe = self.get_object()
-        short_link = (
-            f'http://richi-host.zapto.org/api/s/{encode_id(recipe.id)}'
-        )
+        short_link = f'{settings.BASE_URL}api/s/{encode_id(recipe.id)}'
 
         return Response({'short-link': short_link})
 
@@ -247,7 +243,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Перенаправить на рецепт по закодированному ID."""
         recipe = get_object_or_404(Recipe, id=decode_id(encoded_id))
 
-        return redirect(f'http://richi-host.zapto.org/recipes/{recipe.id}')
+        return redirect(f'{settings.BASE_URL}recipes/{recipe.id}')
 
     def update(self, request, *args, **kwargs):
         """Обновить рецепт."""
