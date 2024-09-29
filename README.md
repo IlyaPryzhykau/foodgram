@@ -33,6 +33,7 @@ GET /api/recipes/
 
 Создать новый рецепт
 POST /api/recipes/
+```
 Content-Type: application/json
 {
   "name": "Нечто съедобное",
@@ -47,6 +48,7 @@ Content-Type: application/json
   "text": "Приготовьте как нибудь эти ингредиенты",
   "cooking_time": 5
 }
+```
 
 Получить информацию о рецепте по ID
 GET /api/recipes/{id}/
