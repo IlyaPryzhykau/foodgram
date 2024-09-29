@@ -59,6 +59,5 @@ GET /api/recipes/{id}/
  - Django REST Framework
  - Docker
  - PostgreSQL
- - 
 ## Автор
 Студент курса Яндекс Практикум: Прыжиков Илья
