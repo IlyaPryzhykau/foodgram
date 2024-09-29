@@ -289,9 +289,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
                 recipes_limit = int(recipes_limit)
             except ValueError:
                 recipes_limit = None
-        recipes = obj.author.recipes.all()[
-                  :recipes_limit or settings.DEFAULT_PAGE_SIZE
-                  ]
+        recipes_limit_value = recipes_limit or settings.DEFAULT_PAGE_SIZE
+        recipes = obj.author.recipes.all()[:recipes_limit_value]
 
         return RecipeShortSerializer(recipes, many=True,
                                      context=self.context).data
