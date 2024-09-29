@@ -116,6 +116,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
     image = Base64ImageField()
+    text = serializers.CharField(required=True)
     cooking_time = serializers.IntegerField(
         min_value=settings.MIN_COOKING_TIME,
         max_value=settings.MAX_COOKING_TIME
@@ -130,20 +131,15 @@ class RecipeSerializer(serializers.ModelSerializer):
     def get_author(self, obj):
         user = obj.author
         request = self.context.get('request')
-        is_subscribed = False
+        context = {'request': request}
 
-        if request and request.user.is_authenticated:
-            is_subscribed = request.user.follower.filter(author=user).exists()
+        serializer = UserSerializer(user, context=context)
+        data = serializer.data
 
-        return {
-            'email': user.email,
-            'id': user.id,
-            'username': user.username,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'is_subscribed': is_subscribed,
-            'avatar': user.avatar.url if user.avatar else None
-        }
+        data.pop('recipes', None)
+        data.pop('recipes_count', None)
+
+        return data
 
     def get_is_favorited(self, obj):
         user = self.context['request'].user
@@ -178,13 +174,6 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         if len(tags) != len(set(tags)):
             raise ValidationError({'tags': 'Теги не должны повторяться.'})
-
-        if not data.get('text'):
-            raise ValidationError({'text': 'Это поле не может быть пустым.'})
-
-        if data.get('cooking_time', 0) <= 0:
-            raise ValidationError(
-                {'cooking_time': 'Время приготовления должно быть больше 0.'})
 
         return data
 
